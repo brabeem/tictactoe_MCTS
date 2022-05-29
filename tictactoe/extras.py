@@ -2,17 +2,18 @@ from logging import root
 import math
 from cpttt import *
 global gamm
-gamm = 0.1
+gamm = 0.1 ##introduced so that the late winning gets a lower score than fast winning of the game##
 
 class node(object):
     
     def __init__(self,parent=None,state=None,action=None):
         self.wins_node_i = 0
+        self.loses_node_i = 0
         self.num_of_sims_node_i = 0
         self.children = []
         self.parent = parent 
         self.board_state = state
-        self.action = action
+        self.action = action ##kun action lera yo state ma aaipugaeko parent ko chai action##
 
 
 #   Do something to avoid division by zero and handle zero by zero condition    
@@ -20,7 +21,7 @@ class node(object):
         # print("wins_node_i",self.wins_node_i)
         # print("num_of_sims_node_i",self.num_of_sims_node_i)
         # print("self.parent.num_of_sims_node_i",self.parent.num_of_sims_node_i)
-        return (self.wins_node_i/(self.num_of_sims_node_i+0.001)) + 2*(math.sqrt(math.log10(self.parent.num_of_sims_node_i+1)/(self.num_of_sims_node_i+0.001))) 
+        return (self.wins_node_i/(self.num_of_sims_node_i+0.001))-(self.loses_node_i/(self.num_of_sims_node_i + 0.001)) + 2*(math.sqrt(math.log10(self.parent.num_of_sims_node_i+1)/(self.num_of_sims_node_i+0.001))) 
     
     ##returns child with maximum UCB##
     def choose_with_max_UCB(self):
@@ -51,12 +52,19 @@ class node(object):
 #Increase the wins as well as number of simulations for wins and loses conditions##
     def backpropagate(self,resul,depth = 0):
         if self.parent == None:
-            return 
-        self.parent.num_of_sims_node_i += 1
-        self.parent.wins_node_i += (resul * (gamm ** depth))
-        depth += 1
-        self.parent.backpropagate(resul,depth)
-
+            return
+        if resul == 'W':
+            self.parent.num_of_sims_node_i += 1
+            self.parent.wins_node_i += (1 * (gamm ** depth))
+            depth += 1
+            self.parent.backpropagate(resul,depth)
+        elif resul == 'L':
+            self.parent.num_of_sims_node_i += 1
+            self.parent.loses_node_i += 1
+            self.parent.backpropagate(resul,depth)
+        else:
+            self.parent.num_of_sims_node_i += 1
+            self.parent.backpropagate(resul,depth)
             
 # Expand if the node is not in the terminal state otherwise just return
     def expand(self):
@@ -81,19 +89,24 @@ def funct(Node):
         if terminal(Node.board_state):
             if winner(Node.board_state) == AI:
                 Node.wins_node_i += 1
-                Node.backpropagate(1,1)
+                Node.backpropagate("W",1)
+                Node.num_of_sims_node_i += 1
+            elif winner(Node.board_state) == None:
+                Node.backpropagate('D',1)
                 Node.num_of_sims_node_i += 1
             else:
-                Node.backpropagate(0,1)
+                Node.backpropagate('L',1)
                 Node.num_of_sims_node_i += 1
 
         elif Node.num_of_sims_node_i == 0:
             winners = Node.roll_out()
             if winners == AI:
                 Node.wins_node_i += 1
-                Node.backpropagate(1,1)
+                Node.backpropagate('W',1)
+            elif winners == None:
+                Node.backpropagate('D',1)
             else:
-                Node.backpropagate(0,1)
+                Node.backpropagate('L',1)
             Node.num_of_sims_node_i += 1
         else:
             Node.expand()
